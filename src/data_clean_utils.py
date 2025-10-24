@@ -110,14 +110,9 @@ def extract_datetime_features(ser):
     )
 
 def time_of_day(ser):
-    time_col = pd.to_datetime(ser,format='mixed').dt.hour
     return(
-        np.select(condlist=[(ser.between(6,12,inclusive='left')),
-                           (ser.between(12,17,inclusive='left')),
-                           (ser.between(17,20,inclusive='left')),
-                           (ser.between(20,24,inclusive='left'))],
-                  choicelist=["morning","afternoon","evening","night"],
-                  default="after_midnight")
+        pd.cut(ser,bins=[0,6,12,17,20,24],right=True,
+        labels=["after_midnight","morning","afternoon","evening","night"])
     )
 
 def calculate_haversine_distance(df):
@@ -143,6 +138,15 @@ def calculate_haversine_distance(df):
 
     return df.assign(distance=distance)
 
+def create_distance_type(data: pd.DataFrame):
+    return(
+        data
+        .assign(
+            distance_type = pd.cut(data["distance"],bins=[0,5,10,15,25],
+                                    right=False, labels=["short","medium","long","very_long"])
+        )
+    )
+
 def perform_data_cleaning(data: pd.DataFrame, saved_data_path="swiggy_cleaned.csv"):
     cleaned_data = (
         data
@@ -150,6 +154,7 @@ def perform_data_cleaning(data: pd.DataFrame, saved_data_path="swiggy_cleaned.cs
         .pipe(data_cleaning)
         .pipe(clean_lat_long)
         .pipe(calculate_haversine_distance)
+        .pipe(create_distance_type)
     )
     #Save Cleaned Data
     cleaned_data.to_csv("cleaned_data.csv",index=False)
@@ -157,9 +162,9 @@ def perform_data_cleaning(data: pd.DataFrame, saved_data_path="swiggy_cleaned.cs
 
 if __name__ == "__main__":
     #data path for data
-    DATA_PATH = "swiggy.csv"
+    DATA_PATH = "uncleaned_delivery_data.csv"
     #read the data from path
-    print('swiggy data load successfully')
+    print('Delivery data load successfully')
     perform_data_cleaning(df)
 
     
